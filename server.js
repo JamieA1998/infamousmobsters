@@ -179,19 +179,30 @@ a:hover {
   text-decoration: underline;
 }
 
+/* CENTRED THREE-COLUMN GAME LAYOUT */
+
 .layout {
   display: grid;
-  grid-template-columns: 180px minmax(0,1fr) 190px;
-  gap: 12px;
-  padding: 12px;
-  max-width: 1250px;
-  margin: auto;
+  grid-template-columns: 180px minmax(0, 1fr) 190px;
+  gap: 14px;
+  padding: 15px;
+  width: 100%;
+  max-width: 1350px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.layout > aside,
+.layout > main {
+  min-width: 0;
+  width: 100%;
 }
 
 .panel {
   background: #151515;
   border: 1px solid #555;
   margin-bottom: 12px;
+  min-width: 0;
 }
 
 .panel h3 {
@@ -219,6 +230,7 @@ nav a:hover {
 
 main {
   min-width: 0;
+  width: 100%;
 }
 
 button {
@@ -312,6 +324,8 @@ input {
   padding: 15px;
   border: 5px double #222;
   font-family: Georgia, serif;
+  width: 100%;
+  min-width: 0;
 }
 
 .paper-top {
@@ -413,25 +427,60 @@ input {
   padding-top: 10px;
 }
 
-@media(max-width:700px) {
+/* TABLET AND MOBILE: KEEP ALL THREE COLUMNS */
+
+@media(max-width:900px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      minmax(105px, 0.85fr)
+      minmax(0, 2.4fr)
+      minmax(115px, 1fr);
+    gap: 8px;
+    padding: 8px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  header {
+    padding: 30px 8px;
   }
 
   header h1 {
-    font-size: 25px;
+    font-size: 24px;
+    letter-spacing: 2px;
   }
 
-  .layout aside:first-child {
-    order: 1;
+  header p {
+    font-size: 11px;
+    letter-spacing: 1px;
   }
 
-  main {
-    order: 0;
+  .panel h3 {
+    padding: 9px 5px;
+    font-size: 11px;
+    letter-spacing: 1px;
   }
 
-  .layout aside:last-child {
-    order: 2;
+  .panel-content {
+    padding: 8px 6px;
+  }
+
+  nav a {
+    padding: 9px 5px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .stat {
+    display: block;
+    font-size: 11px;
+    padding: 7px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .stat span,
+  .stat b {
+    display: block;
   }
 
   .paper-story {
@@ -440,6 +489,70 @@ input {
 
   .paper-links {
     grid-template-columns: 1fr;
+  }
+
+  .paper-title {
+    font-size: 25px;
+  }
+
+  .paper-headline {
+    font-size: 20px;
+  }
+
+  .car-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .car-card img {
+    height: 90px;
+  }
+
+  .newspaper {
+    padding: 8px;
+    border-width: 3px;
+  }
+}
+
+/* VERY NARROW PHONES */
+
+@media(max-width:380px) {
+  .layout {
+    grid-template-columns:
+      minmax(88px, 0.85fr)
+      minmax(0, 2fr)
+      minmax(95px, 1fr);
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .panel h3 {
+    font-size: 9px;
+    padding: 7px 3px;
+  }
+
+  nav a {
+    font-size: 9px;
+    padding: 7px 3px;
+  }
+
+  .stat {
+    font-size: 9px;
+  }
+
+  .panel-content {
+    padding: 5px 3px;
+  }
+
+  .paper-title {
+    font-size: 19px;
+  }
+
+  .paper-headline {
+    font-size: 16px;
+  }
+
+  .paper-story {
+    font-size: 12px;
   }
 }
 </style>
