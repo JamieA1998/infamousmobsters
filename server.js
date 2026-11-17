@@ -84,7 +84,6 @@ function pickCar() {
   }
   return carPool[0];
 }
-
 const page = (title, body) => `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
