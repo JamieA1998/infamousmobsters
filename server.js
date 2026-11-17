@@ -142,7 +142,7 @@ const page = (title, body) => `<!DOCTYPE html>
 body {
   margin: 0;
   background: #080808;
-  color: #eeeeee;
+  color: #eee;
   font: 14px Georgia, serif;
 }
 
@@ -158,11 +158,9 @@ header {
 
 header h1 {
   margin: 0;
-  color: #fff;
-  font-family: Georgia, serif;
+  color: white;
   font-size: 32px;
   letter-spacing: 5px;
-  text-shadow: 2px 2px 8px #000;
 }
 
 header p {
@@ -200,8 +198,7 @@ a:hover {
   margin: 0;
   padding: 13px;
   background: #252525;
-  color: #fff;
-  font-family: Georgia, serif;
+  color: white;
   letter-spacing: 2px;
   border-bottom: 2px solid #888;
 }
@@ -214,7 +211,6 @@ nav a {
   display: block;
   padding: 11px;
   border-bottom: 1px solid #383838;
-  letter-spacing: 1px;
 }
 
 nav a:hover {
@@ -301,17 +297,120 @@ input {
   font-size: 12px;
 }
 
-.Common {
-  color: #ccc;
-}
-
-.Rare {
-  color: #eee;
-}
-
+.Common { color: #ccc; }
+.Rare { color: #eee; }
 .Extremely-Rare {
-  color: #fff;
+  color: white;
   text-shadow: 0 0 5px #aaa;
+}
+
+/* NEWSPAPER HOMEPAGE */
+
+.newspaper {
+  background: #e5e1d7;
+  color: #171717;
+  padding: 15px;
+  border: 5px double #222;
+  font-family: Georgia, serif;
+}
+
+.paper-top {
+  text-align: center;
+  border-bottom: 3px solid #222;
+  padding-bottom: 12px;
+}
+
+.paper-top small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.paper-title {
+  font-size: clamp(27px, 6vw, 48px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 10px 0;
+  text-transform: uppercase;
+}
+
+.paper-subtitle {
+  font-style: italic;
+  font-size: 13px;
+}
+
+.paper-date {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
+  padding: 7px 0;
+  margin-top: 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.paper-headline {
+  font-size: clamp(23px, 4vw, 34px);
+  line-height: 1.1;
+  text-align: center;
+  font-weight: bold;
+  margin: 18px 0 10px;
+  text-transform: uppercase;
+}
+
+.paper-image {
+  width: 100%;
+  max-height: 230px;
+  object-fit: cover;
+  filter: grayscale(100%);
+  border: 2px solid #222;
+}
+
+.paper-story {
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: justify;
+  column-count: 2;
+  column-gap: 20px;
+  margin-top: 12px;
+}
+
+.paper-divider {
+  border: 0;
+  border-top: 2px solid #222;
+  margin: 15px 0;
+}
+
+.paper-links {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.paper-links a {
+  background: #222;
+  color: white;
+  padding: 12px 5px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.paper-links a:hover {
+  background: #555;
+}
+
+.paper-bottom {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 2px;
+  border-top: 2px solid #222;
+  margin-top: 15px;
+  padding-top: 10px;
 }
 
 @media(max-width:700px) {
@@ -333,6 +432,14 @@ input {
 
   .layout aside:last-child {
     order: 2;
+  }
+
+  .paper-story {
+    column-count: 1;
+  }
+
+  .paper-links {
+    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -361,7 +468,6 @@ async function getPlayer(req) {
     "SELECT * FROM players WHERE id=$1",
     [req.session.player]
   );
-
   return result.rows[0];
 }
 
@@ -380,12 +486,10 @@ app.get("/register", (req, res) => {
               <input name="username"
                 placeholder="Choose a username"
                 required minlength="3" maxlength="20">
-
               <input name="password"
                 type="password"
                 placeholder="Choose a password"
                 required minlength="8">
-
               <button>CREATE ACCOUNT</button>
             </form>
             <p>Already a member? <a href="/login">Log in</a></p>
@@ -409,7 +513,6 @@ app.post("/register", async (req, res) => {
 
   try {
     const hash = await bcrypt.hash(password, 10);
-
     const result = await pool.query(
       "INSERT INTO players(username,password) VALUES($1,$2) RETURNING id",
       [username, hash]
@@ -423,13 +526,10 @@ app.post("/register", async (req, res) => {
           "Account created, but login failed. Please log in."
         );
       }
-
       res.redirect("/game");
     });
-
   } catch (e) {
     console.error("Registration error:", e);
-
     res.status(400).send(
       "That username may already be taken. <a href='/register'>Try again</a>"
     );
@@ -444,16 +544,11 @@ app.get("/login", (req, res) => {
           <h3>FAMILY MEMBER LOGIN</h3>
           <div class="panel-content">
             <form method="post" action="/login">
-              <input name="username"
-                placeholder="Username" required>
-
-              <input name="password"
-                type="password"
+              <input name="username" placeholder="Username" required>
+              <input name="password" type="password"
                 placeholder="Password" required>
-
               <button>ENTER THE FAMILY</button>
             </form>
-
             <p>New here? <a href="/register">Create an account</a></p>
           </div>
         </section>
@@ -471,11 +566,10 @@ app.post("/login", async (req, res) => {
 
     const player = result.rows[0];
 
-    if (!player ||
-        !await bcrypt.compare(
-          String(req.body.password || ""),
-          player.password
-        )) {
+    if (!player || !await bcrypt.compare(
+      String(req.body.password || ""),
+      player.password
+    )) {
       return res.status(401).send(
         "Incorrect username or password. <a href='/login'>Try again</a>"
       );
@@ -489,10 +583,8 @@ app.post("/login", async (req, res) => {
           "Login could not be saved. Please try again."
         );
       }
-
       res.redirect("/game");
     });
-
   } catch (e) {
     console.error("Login error:", e);
     res.status(500).send("Login error. Please try again later.");
@@ -513,10 +605,7 @@ app.post("/crime", requireLogin, async (req, res) => {
   }
 
   const p = await getPlayer(req);
-
-  if (!p) {
-    return res.redirect("/logout");
-  }
+  if (!p) return res.redirect("/logout");
 
   const now = Math.floor(Date.now() / 1000);
   const wait = 15 - (now - (p.last_crime || 0));
@@ -548,10 +637,7 @@ app.post("/crime", requireLogin, async (req, res) => {
 
 app.post("/gta", requireLogin, async (req, res) => {
   const p = await getPlayer(req);
-
-  if (!p) {
-    return res.redirect("/logout");
-  }
+  if (!p) return res.redirect("/logout");
 
   const now = Math.floor(Date.now() / 1000);
   const wait = 30 - (now - (p.last_gta || 0));
@@ -592,7 +678,6 @@ app.post("/gta", requireLogin, async (req, res) => {
 app.get("/game", requireLogin, async (req, res) => {
   try {
     const p = await getPlayer(req);
-
     if (!p) return res.redirect("/logout");
 
     const links = [
@@ -637,13 +722,77 @@ app.get("/game", requireLogin, async (req, res) => {
 
     let content = "";
 
-    if (section === "Crimes") {
+    if (section === "Game News") {
+      content = `
+        <div class="newspaper">
+          <div class="paper-top">
+            <small>THE CITY'S MOST FEARED DAILY</small>
+            <div class="paper-title">The Infamous Times</div>
+            <div class="paper-subtitle">
+              All the news from the criminal underworld
+            </div>
+            <div class="paper-date">
+              <span>Special Edition</span>
+              <span>Est. InfamousMobsters</span>
+              <span>Price: One Reputation</span>
+            </div>
+          </div>
+
+          <h2 class="paper-headline">
+            THE UNDERWORLD IS OPEN FOR BUSINESS
+          </h2>
+
+          <img class="paper-image"
+            src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=80"
+            alt="Vintage city skyline">
+
+          <div class="paper-story">
+            <p>
+              <b>THE CITY —</b> A new name is making its way
+              through the streets. The family is growing,
+              the garages are filling, and the criminal
+              underworld is waiting for its next big player.
+            </p>
+            <p>
+              New members are encouraged to build their
+              reputation, earn money and make their mark
+              on the city. Every successful job brings
+              another opportunity to rise through the ranks.
+            </p>
+            <p>
+              Whether you choose the streets or the garage,
+              remember the oldest rule in the business:
+              loyalty comes first.
+            </p>
+          </div>
+
+          <hr class="paper-divider">
+
+          <h3>YOUR NAME IS IN THE PAPERS</h3>
+          <p>
+            Welcome to the family,
+            <b>${escapeHtml(p.username)}</b>.
+            Your empire starts today.
+          </p>
+
+          <div class="paper-links">
+            <a href="/game?section=Crimes">CRIME DESK</a>
+            <a href="/game?section=GTA">CITY GARAGE</a>
+            <a href="/game?section=My%20Garage">MY GARAGE</a>
+          </div>
+
+          <div class="paper-bottom">
+            POWER • RESPECT • LOYALTY
+          </div>
+        </div>
+      `;
+
+    } else if (section === "Crimes") {
       content = `
         <h3>CRIME ACTIVITIES</h3>
         <div class="panel-content">
           ${msg}
           <p>Choose your next move in the city.</p>
-
           ${Object.keys(crimes).map(name => `
             <div class="action">
               <h4>${escapeHtml(name)}</h4>
@@ -663,15 +812,11 @@ app.get("/game", requireLogin, async (req, res) => {
         <div class="panel-content">
           ${msg}
           <p>Take a chance and add another vehicle to your collection.</p>
-
           <form method="post" action="/gta">
             <button>STEAL A CAR</button>
           </form>
-
           <p>
-            <a href="/game?section=My%20Garage">
-              VIEW MY GARAGE
-            </a>
+            <a href="/game?section=My%20Garage">VIEW MY GARAGE</a>
           </p>
         </div>
       `;
@@ -689,7 +834,6 @@ app.get("/game", requireLogin, async (req, res) => {
         <div class="panel-content">
           ${msg}
           <p>Cars collected: ${cars.length}</p>
-
           ${cars.length ? `
             <div class="car-grid">
               ${cars.map(car => `
@@ -736,7 +880,6 @@ app.get("/game", requireLogin, async (req, res) => {
 
     res.send(page("Game", `
       <div class="layout">
-
         <aside>
           <section class="panel">
             <h3>THE FAMILY</h3>
@@ -748,7 +891,6 @@ app.get("/game", requireLogin, async (req, res) => {
           <section class="panel">
             ${content}
           </section>
-
           <p><a href="/logout">LEAVE THE FAMILY / LOG OUT</a></p>
         </main>
 
@@ -756,61 +898,49 @@ app.get("/game", requireLogin, async (req, res) => {
           <section class="panel">
             <h3>PLAYER DETAILS</h3>
             <div class="panel-content">
-
               <div class="stat">
                 <span>Money</span>
                 <b>£${Number(p.money).toLocaleString("en-GB")}</b>
               </div>
-
               <div class="stat">
                 <span>Points</span>
                 <b>${p.points}</b>
               </div>
-
               <div class="stat">
                 <span>Bullets</span>
                 <b>${p.bullets}</b>
               </div>
-
               <div class="stat">
                 <span>Cars</span>
                 <b>${p.cars || 0}</b>
               </div>
-
               <div class="stat">
                 <span>Gun</span>
                 <b>None</b>
               </div>
-
               <div class="stat">
                 <span>Armour</span>
                 <b>None</b>
               </div>
-
               <div class="stat">
                 <span>Location</span>
                 <b>Coventry</b>
               </div>
-
               <div class="stat">
                 <span>Health</span>
                 <b>${p.health}%</b>
               </div>
-
               <div class="stat">
                 <span>Gang</span>
                 <b>None</b>
               </div>
-
               <div class="stat">
                 <span>Rank</span>
                 <b>${escapeHtml(p.rank)}</b>
               </div>
-
             </div>
           </section>
         </aside>
-
       </div>
     `));
 
