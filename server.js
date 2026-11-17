@@ -1,3 +1,4 @@
+
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcryptjs");
@@ -7,8 +8,6 @@ const app = express();
 const db = new Database("mobsters.db");
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
 app.use(session({
   secret: process.env.SESSION_SECRET || "change-this-secret",
   resave: false,
@@ -27,6 +26,15 @@ CREATE TABLE IF NOT EXISTS players (
   health INTEGER DEFAULT 100,
   rank TEXT DEFAULT 'Newbie'
 );
+
+CREATE TABLE IF NOT EXISTS owned_cars (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id INTEGER NOT NULL,
+  car_name TEXT NOT NULL,
+  rarity TEXT NOT NULL,
+  image TEXT NOT NULL,
+  stolen_at INTEGER NOT NULL
+);
 `);
 
 for (const column of ["last_crime", "last_gta", "cars"]) {
@@ -39,6 +47,27 @@ const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;",
   '"': "&quot;", "'": "&#39;"
 }[c]));
+
+const carPool = [
+  {name:"City Hatchback",rarity:"Common",image:"https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=80",weight:25},
+  {name:"Street Coupe",rarity:"Common",image:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",weight:25},
+  {name:"Classic Sedan",rarity:"Common",image:"https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",weight:25},
+  {name:"Luxury GT",rarity:"Rare",image:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",weight:10},
+  {name:"Performance Coupe",rarity:"Rare",image:"https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=80",weight:10},
+  {name:"Supercar",rarity:"Extremely Rare",image:"https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?auto=format&fit=crop&w=800&q=80",weight:2},
+  {name:"Exotic Hypercar",rarity:"Extremely Rare",image:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80",weight:3}
+];
+
+function pickCar() {
+  const total = carPool.reduce((sum, car) => sum + car.weight, 0);
+  let roll = Math.random() * total;
+
+  for (const car of carPool) {
+    roll -= car.weight;
+    if (roll <= 0) return car;
+  }
+  return carPool[0];
+}
 
 const page = (title, body) => `<!DOCTYPE html>
 <html lang="en">
@@ -53,7 +82,6 @@ header{background:#172b3b;padding:15px;border-bottom:2px solid #34516a}
 header h1{margin:0;color:#d9b56d;font-size:23px}
 header p{margin:5px 0 0;color:#9aabb9}
 a{color:#d9b56d;text-decoration:none}
-a:hover{text-decoration:underline}
 .layout{display:grid;grid-template-columns:180px minmax(0,1fr) 190px;gap:10px;padding:10px;max-width:1250px;margin:auto}
 .panel{background:#192733;border:1px solid #344959;margin-bottom:10px}
 .panel h3{margin:0;padding:9px;background:#263b4b;color:#e0bd79;font-size:14px}
@@ -62,11 +90,19 @@ nav a{display:block;padding:8px;border-bottom:1px solid #2a3b48}
 main{min-width:0}
 button{padding:10px;margin:5px 0;background:#806238;border:0;color:white;width:100%;cursor:pointer;font-weight:bold}
 button:hover{background:#a17c49}
+input{padding:10px;margin:5px 0;background:#0e1922;border:1px solid #526879;color:white;width:100%}
 .stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2a3b48;gap:5px}
 .notice{padding:10px;background:#263b4b;margin:8px 0}
 .action{background:#202f3b;border:1px solid #3a5060;padding:12px;margin:10px 0}
-.action h4{margin:0 0 8px;color:#e0bd79}
 .message{padding:10px;background:#263b4b;border-left:3px solid #d9b56d;margin:10px 0}
+.car-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.car-card{background:#202f3b;border:1px solid #405465;padding:8px}
+.car-card img{width:100%;height:125px;object-fit:cover;display:block}
+.car-card h4{margin:9px 0 5px}
+.rarity{font-weight:bold;font-size:12px}
+.Common{color:#b8c4ce}
+.Rare{color:#55b9ff}
+.Extremely-Rare{color:#d9a1ff}
 @media(max-width:700px){.layout{grid-template-columns:1fr}.layout aside:first-child{order:1}main{order:0}.layout aside:last-child{order:2}}
 </style>
 </head>
@@ -84,9 +120,7 @@ function getPlayer(req) {
   return db.prepare("SELECT * FROM players WHERE id=?").get(req.session.player);
 }
 
-app.get("/",(req,res)=>{
-  res.redirect(req.session.player ? "/game" : "/login");
-});
+app.get("/",(req,res)=>res.redirect(req.session.player?"/game":"/login"));
 
 app.get("/register",(req,res)=>res.send(page("Register",`
 <div class="layout"><main><section class="panel">
@@ -132,98 +166,77 @@ app.post("/login",async(req,res)=>{
 });
 
 const crimes = {
-  "Street Robbery": { min: 100, max: 250 },
-  "Shop Robbery": { min: 250, max: 500 },
-  "Warehouse Robbery": { min: 500, max: 900 }
+  "Street Robbery":{min:100,max:250},
+  "Shop Robbery":{min:250,max:500},
+  "Warehouse Robbery":{min:500,max:900}
 };
 
 app.post("/crime",requireLogin,(req,res)=>{
-  const name=String(req.body.crime||"");
-  const crime=crimes[name];
-  if(!crime) return res.redirect("/game?section=Crimes&msg=Invalid%20crime");
-
+  const crime=crimes[String(req.body.crime||"")];
+  if(!crime)return res.redirect("/game?section=Crimes");
   const p=getPlayer(req);
   const now=Math.floor(Date.now()/1000);
   const wait=15-(now-(p.last_crime||0));
-
-  if(wait>0)
-    return res.redirect("/game?section=Crimes&msg="+encodeURIComponent("Please wait "+wait+" seconds before committing another crime."));
-
+  if(wait>0)return res.redirect("/game?section=Crimes&msg="+encodeURIComponent("Please wait "+wait+" seconds."));
   const reward=Math.floor(Math.random()*(crime.max-crime.min+1))+crime.min;
-
-  db.prepare("UPDATE players SET money=money+?,last_crime=? WHERE id=?")
-    .run(reward,now,p.id);
-
-  res.redirect("/game?section=Crimes&msg="+encodeURIComponent("Success! You completed "+name+" and earned £"+reward.toLocaleString("en-GB")+"."));
+  db.prepare("UPDATE players SET money=money+?,last_crime=? WHERE id=?").run(reward,now,p.id);
+  res.redirect("/game?section=Crimes&msg="+encodeURIComponent("Success! You earned £"+reward.toLocaleString("en-GB")+"."));
 });
 
 app.post("/gta",requireLogin,(req,res)=>{
-  const action=String(req.body.action||"");
-  if(!["Steal a Car","Steal"].includes(action))
-    return res.redirect("/game?section=GTA&msg=Invalid%20action");
-
   const p=getPlayer(req);
   const now=Math.floor(Date.now()/1000);
   const wait=30-(now-(p.last_gta||0));
+  if(wait>0)return res.redirect("/game?section=GTA&msg="+encodeURIComponent("Please wait "+wait+" seconds before trying again."));
 
-  if(wait>0)
-    return res.redirect("/game?section=GTA&msg="+encodeURIComponent("Please wait "+wait+" seconds before trying again."));
+  const car=pickCar();
 
-  if(action==="Steal a Car") {
-    db.prepare("UPDATE players SET cars=cars+1,last_gta=? WHERE id=?").run(now,p.id);
-    return res.redirect("/game?section=GTA&msg="+encodeURIComponent("Success! You stole a car. Your car collection has increased."));
-  }
+  db.prepare("INSERT INTO owned_cars(player_id,car_name,rarity,image,stolen_at) VALUES(?,?,?,?,?)")
+    .run(p.id,car.name,car.rarity,car.image,now);
 
-  const reward=Math.floor(Math.random()*201)+100;
-  db.prepare("UPDATE players SET money=money+?,last_gta=? WHERE id=?").run(reward,now,p.id);
+  db.prepare("UPDATE players SET cars=cars+1,last_gta=? WHERE id=?").run(now,p.id);
 
-  res.redirect("/game?section=GTA&msg="+encodeURIComponent("Success! You stole £"+reward.toLocaleString("en-GB")+"."));
+  res.redirect("/game?section=GTA&msg="+encodeURIComponent("You stole a "+car.name+"! Rarity: "+car.rarity+". Check My Garage."));
 });
 
 app.get("/game",requireLogin,(req,res)=>{
   const p=getPlayer(req);
-  const links=["Game News","Get Help","Players Online","Top 10","Game Stats","Global Owners","Profile","My Stats","My Perks","My Items","Notifications","Points","Buy Points","Crimes","GTA","Jail","Organised Crime","Missions","Bank","Bullets","Lottery","Hospital","Airport","Heist","Attempts","Kill"];
-
+  const links=["Game News","Get Help","Players Online","Top 10","Game Stats","Global Owners","Profile","My Stats","My Perks","My Items","My Garage","Notifications","Points","Buy Points","Crimes","GTA","Jail","Organised Crime","Missions","Bank","Bullets","Lottery","Hospital","Airport","Heist","Attempts","Kill"];
   const nav=links.map(x=>`<a href="/game?section=${encodeURIComponent(x)}">${x}</a>`).join("");
   const section=String(req.query.section||"Game News");
-  const msg=req.query.msg ? `<div class="message">${escapeHtml(req.query.msg)}</div>` : "";
-
+  const msg=req.query.msg?`<div class="message">${escapeHtml(req.query.msg)}</div>`:"";
   let content="";
 
   if(section==="Crimes") {
-    content=`<h3>Crimes</h3><div class="panel-content">
-    ${msg}<p>Choose a crime to attempt.</p>
-    ${Object.keys(crimes).map(name=>`<div class="action">
-      <h4>${name}</h4>
-      <form method="post" action="/crime">
-      <input type="hidden" name="crime" value="${name}">
-      <button type="submit">Commit Crime</button>
-      </form></div>`).join("")}
-    </div>`;
+    content=`<h3>Crimes</h3><div class="panel-content">${msg}<p>Choose a crime to attempt.</p>
+    ${Object.keys(crimes).map(name=>`<div class="action"><h4>${name}</h4>
+    <form method="post" action="/crime"><input type="hidden" name="crime" value="${name}">
+    <button>Commit Crime</button></form></div>`).join("")}</div>`;
   } else if(section==="GTA") {
-    content=`<h3>GTA</h3><div class="panel-content">
-    ${msg}<p>Choose what you want to do.</p>
-    <div class="action"><h4>Steal a Car</h4>
-    <form method="post" action="/gta">
-    <input type="hidden" name="action" value="Steal a Car">
-    <button type="submit">Steal a Car</button></form></div>
-    <div class="action"><h4>Steal</h4>
-    <form method="post" action="/gta">
-    <input type="hidden" name="action" value="Steal">
-    <button type="submit">Steal</button></form></div>
+    content=`<h3>GTA - Steal a Car</h3><div class="panel-content">${msg}
+    <p>Try your luck and add a random car to your collection.</p>
+    <form method="post" action="/gta"><button>Steal a Car</button></form>
+    <p><a href="/game?section=My%20Garage">View My Garage</a></p></div>`;
+  } else if(section==="My Garage") {
+    const cars=db.prepare("SELECT * FROM owned_cars WHERE player_id=? ORDER BY id DESC").all(p.id);
+    content=`<h3>My Garage</h3><div class="panel-content">${msg}
+    <p>Cars collected: ${cars.length}</p>
+    ${cars.length?`<div class="car-grid">${cars.map(car=>`
+    <div class="car-card">
+    <img src="${escapeHtml(car.image)}" alt="${escapeHtml(car.car_name)}" loading="lazy">
+    <h4>${escapeHtml(car.car_name)}</h4>
+    <div class="rarity ${car.rarity.replace(/ /g,"-")}">${escapeHtml(car.rarity)}</div>
+    </div>`).join("")}</div>`:"<p>Your garage is empty. Visit GTA and steal your first car!</p>"}
     </div>`;
   } else if(section==="Profile"||section==="My Stats") {
     content=`<h3>${escapeHtml(section)}</h3><div class="panel-content">
-    <p>Player: ${escapeHtml(p.username)}</p>
-    <p>Rank: ${escapeHtml(p.rank)}</p>
-    <p>Cars owned: ${p.cars||0}</p>
-    <p>Money: £${p.money.toLocaleString("en-GB")}</p>
+    <p>Player: ${escapeHtml(p.username)}</p><p>Rank: ${escapeHtml(p.rank)}</p>
+    <p>Cars owned: ${p.cars||0}</p><p>Money: £${p.money.toLocaleString("en-GB")}</p>
     <p>Health: ${p.health}%</p></div>`;
   } else {
     content=`<h3>${escapeHtml(section)}</h3><div class="panel-content">
     <p>Welcome to InfamousMobsters, ${escapeHtml(p.username)}.</p>
-    <p>Your criminal empire starts here.</p>
-    </div>`;
+    <p>Your criminal empire starts here.</p></div>`;
   }
 
   res.send(page("Game",`
