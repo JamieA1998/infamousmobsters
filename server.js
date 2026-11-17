@@ -587,7 +587,8 @@ app.post("/gta", requireLogin, async (req, res) => {
       ". Check My Garage."
     )
   );
-  
+});
+
 app.get("/game", requireLogin, async (req, res) => {
   try {
     const p = await getPlayer(req);
@@ -837,6 +838,3 @@ setupDatabase()
     console.error("Database startup failed:", err);
     process.exit(1);
   });
-
-});
-
